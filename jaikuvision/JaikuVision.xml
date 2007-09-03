@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Module>
+<ModulePrefs title="Flickrvision clone" description="Using the Flickr API, recently taken and geotagged images are fetched from Flickr and displayed for a short interval on the map, one by one. This mapplet tries to reproduce the experience of watching the popular flickrvision by David Troy." author="Ugo Di Profio" author_email="gmetropol+mapplet@gmail.com" screenshot="http://farm2.static.flickr.com/1295/537019113_edb9f1194e_o_d.jpg" thumbnail="http://farm2.static.flickr.com/1325/536905798_b32059a22f_o_d.jpg" height="300">
+  <Require feature="sharedmap"/>
+</ModulePrefs>
+<Content type="html"><![CDATA[
+
+<small>
+<h3>Flickrvision Clone</h3><br>
+Using the <a href="http://www.flickr.com/services/api/">Flickr API</a>, recently taken and geotagged images are fetched from Flickr and displayed for a short interval on the map, one by one. This mapplet tries to reproduce the experience of watching the popular <a href="http://flickrvision.com/">flickrvision</a> by David Troy.
+</small>
+
+<cite id="debug">Loading...</cite>
+
+<script>
+
+window.onunload = killTimer;
+
+var map = new GMap2();
+var geocoder = new GClientGeocoder();
+
+// world view
+map.setCenter(new GLatLng(0,0), 3);   
+
+var current = 0; // the photo item to process
+var showtime = 7; // every how many seconds a photo is processed
+var skipdelay = 0.050; // timeout to skip to next photo in batch when the current is not usable
+var items; // the array of items waiting to be processed.
+var marker; // the marker for the current photo
+var checkPresenceTimeoutID;
+var FetchItemsTimeoutID;
+
+// "tiny" marker icon
+var tinyIcon = new GIcon();
+tinyIcon.image = "http://labs.google.com/ridefinder/images/mm_20_red.png";
+tinyIcon.shadow = "http://labs.google.com/ridefinder/images/mm_20_shadow.png";
+tinyIcon.iconSize = new GSize(12, 20);
+tinyIcon.shadowSize = new GSize(22, 20);
+tinyIcon.iconAnchor = new GPoint(6, 20);
+tinyIcon.infoWindowAnchor = new GPoint(5, 1);
+
+
+var baseurl = buildURL();
+
+// fetch the first batch of items from Flickr
+FetchItems( parseContent );
+
+//
+// THE END
+//
+
+//
+// Builds the url of the public timeline
+//
+function buildURL() {
+  var url = "http://jaiku.com/feed/json";
+  return url;
+}
+
+//
+// Fetch a content
+//
+function FetchItems( processContent ) {
+  var url = baseurl;
+  _IG_FetchXmlContent(url, processContent, { refreshInterval: 20 } );
+  document.getElementById("debug").innerHTML = "Loading public timeline...";		
+}
+
+//
+// Gets detailed info about a user from Jaiku
+//
+function checkPresence() {
+  var userurl = items.stream[current].user.url + '/presence/json';
+  _IG_FetchXmlContent( userurl, displayCriteriaMet, { refreshInterval: 20 } );
+  document.getElementById("debug").innerHTML = "Loading user presence info...";		
+}
+
+//
+// Fetch the actual feed from Jaiku
+//
+function parseContent(response) {
+  delete items; // release resources allocated for previous batch (is this right?)
+  eval("items = " + response );
+  checkPresence();
+}
+
+//
+// Process the current item
+//
+function ProcessItem( latlng ) {
+  var item = items.stream[ current ];
+  clearMap( marker );     // remove previous marker
+  marker = createItemMarker( item, latlng ); // and prepare the next
+  manageContent( showtime );
+}
+
+
+//
+// Manages content
+//
+function manageContent( timeout ) {
+  // move to next item
+  current++;
+
+  if ( current < items.stream.length ) {
+    // it there are items left, set timeout to process the next.
+    checkPresenceTimeoutID = window.setTimeout( checkPresence, timeout*1000);
+  }
+  else {
+    // no items left: reset status and get a new batch
+    current = 0;
+    baseurl = buildURL(); // processed all pages from last batch. need to get a new one.
+    FetchItemsTimeoutID = window.setTimeout( "FetchItems( parseContent )", timeout*1000);
+  }
+}
+
+
+//
+// Check if required conditions for display i.e. geolocation are met.
+//
+// Values for location.city and location.country
+// are often arbitrary and, if used together as such,
+// geocoding may fail.
+// What we do here is to try geocoding separately for
+// city, country, and city+country
+// and see if we get at least one coding.
+//
+function displayCriteriaMet( response ) {
+  eval("var item = " + response );
+  if ( item.location ) {
+    // try geocoding for city + country
+    tryGeocoding( item.location, 'full' );
+  }
+  else {
+    manageContent( skipdelay );
+  }
+}
+
+
+//
+// Decide which geocoding to use
+//
+function tryGeocoding( location, level ) {
+  var address;
+  var nextlevel;
+  switch( level ) {
+  case 'full':
+    address = location.city + ' ' + location.country;
+    nextlevel = 'city';
+    break;
+  case 'city':
+    address = location.city;
+    nextlevel = 'country';
+    break;
+  case 'country':
+    address = location.country;
+    nextlevel = 'failed';
+    break;
+  case 'failed':
+    manageContent( skipdelay ); // could not geocode location. move to next item.
+    break;
+  }
+  geocoder.getLatLngAsync( address,
+			   function(latlng) {
+			     document.getElementById("debug").innerHTML = 'GeoCode(' +address+ ')= ' +latlng;
+			     if ( latlng ) {
+			       ProcessItem( latlng );
+			     } else {
+			       tryGeocoding( location, nextlevel );
+			     }
+			   }
+  );
+}
+
+
+//
+// Close info window and remove marker
+//
+function clearMap( marker ) {
+  map.closeInfoWindow();
+  map.removeOverlay( marker );
+  delete marker;
+}
+
+
+//
+// Creates HTML for the marker for the item
+//
+function createItemMarker( item, latlng ) {
+  var html = '<div style="width:250px; font-size:12px;">'+
+    '<p>' +
+    '<img style="float:left; margin:4px" src="' +item.user.avatar+ '"> '+
+    item.title+'</p>'+
+    '<p>by <a href="' +item.user.url+ '"><b>' +item.user.nick+ '</b></a> '+
+    item.created_at_relative + '</p>' +
+    '</div>';
+  var marker = new GMarker(latlng, {icon:tinyIcon} );
+  map.addOverlay(marker);
+  marker.openInfoWindowHtml( html, {disableGoogleLinks:true} );
+  return marker;
+}
+
+//
+// Kills running timeouts
+//
+function killTimer() {
+  clearTimeout( checkPresenceTimeoutID );
+  clearTimeout( FetchItemsTimeoutID );
+}
+
+</script>
+
+]]></Content>
+</Module>
+
