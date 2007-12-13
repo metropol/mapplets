@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Module>
+<ModulePrefs title="SMugMugVision" description="Using the SmugMug API (or its feeds), geotagged images are fetched from SmugMug and displayed for a short interval on the map, one by one. This mapplet is inspired by flickrvision from David Troy." author="Ugo Di Profio" author_email="gmetropol+mapplet@gmail.com" screenshot="" thumbnail="" height="300">
+  <Require feature="sharedmap"/>
+</ModulePrefs>
+<Content type="html"><![CDATA[
+
+<small>
+<h3>SmugMugVision</h3><br>
+Using the <a href="http://smugmug.jot.com/API">SmugMug API</a> (or its <a href="http://smugmug.jot.com/WikiHome/Customization/FeedsTricks">feeds<a>), geotagged images are fetched from <a href="http://smugmug.com/">SmugMug</a> and displayed for a short interval on the map, one by one. 
+This mapplet is inspired by <a href="http://flickrvision.com">flickrvision</a> from David Troy.
+</small>
+
+<cite id="debug">Loading...</cite>
+
+<script>
+
+window.onunload = killTimer;
+
+var map = new GMap2();
+var geocoder = new GClientGeocoder();
+
+// world view
+map.setCenter(new GLatLng(0,0), 3);   
+
+var current = 0; // the photo item to process
+var showtime = 7; // every how many seconds a photo is processed
+var skipdelay = 0.050; // timeout to skip to next photo in batch when the current is not usable
+var items; // the array of items waiting to be processed.
+var marker; // the marker for the current photo
+var nextItemTimeoutID;
+var FetchItemsTimeoutID;
+
+// "tiny" marker icon
+var tinyIcon = new GIcon();
+tinyIcon.image = "http://labs.google.com/ridefinder/images/mm_20_red.png";
+tinyIcon.shadow = "http://labs.google.com/ridefinder/images/mm_20_shadow.png";
+tinyIcon.iconSize = new GSize(12, 20);
+tinyIcon.shadowSize = new GSize(22, 20);
+tinyIcon.iconAnchor = new GPoint(6, 20);
+tinyIcon.infoWindowAnchor = new GPoint(5, 1);
+
+
+var baseurl = buildURL();
+
+// fetch the first batch of items from SmugMug
+FetchItems( parseContent );
+
+//
+// THE END
+//
+
+//
+// Builds the url of the public timeline
+//
+function buildURL () {
+  var url = "http://www.smugmug.com/hack/feed.mg?Type=geoAll&format=atom03";
+  return url;
+}
+
+//
+// Fetch feed from SmugMug
+//
+function FetchItems ( processContent ) {
+  var url = baseurl;
+  _IG_FetchXmlContent(url, processContent, { refreshInterval: 20 } );
+  document.getElementById("debug").innerHTML = "Loading geotagged photos feed...";		
+}
+
+//
+// Parse the feed 
+//
+function parseContent (response) {
+  delete items; // release resources allocated for previous batch (is this right?)
+  items = response.getElementsByTagName("entry");
+  ProcessItem(); // start processing
+}
+
+//
+// Process the current item
+//
+function ProcessItem () {
+  var item = items.item[ current ];
+  clearMap( marker );     // remove previous marker
+  marker = createItemMarker( item ); // and prepare the next
+  manageContent( showtime );
+}
+
+
+//
+// Manages content
+//
+function manageContent( timeout ) {
+  // move to next item
+  current++;
+
+  if ( current < items.length ) {
+    // it there are items left, set timeout to process the next.
+    nextItemTimeoutID = window.setTimeout( ProcessItem, timeout*1000);
+  }
+  else {
+    // no items left: reset status and get a new batch
+    current = 0;
+    baseurl = buildURL(); // processed all pages from last batch. need to get a new one.
+    FetchItemsTimeoutID = window.setTimeout( "FetchItems( parseContent )", timeout*1000);
+  }
+}
+
+
+//
+// Close info window and remove marker
+//
+function clearMap( marker ) {
+  map.closeInfoWindow();
+  map.removeOverlay( marker );
+  delete marker;
+}
+
+
+//
+// Creates HTML for the marker for the item
+//
+function createItemMarker ( item ) {
+  // get info to build the marker
+  var lat  = item.getAttribute("geo:lat");
+  var lng  = photo.getAttribute("geo:long");
+  var latlng = new GLatLng(lat, lng);
+  var title = item.getAttribute("title");
+  var thumb = item.getAttribute("id");
+  var lastupdate = item.getAttribute("modified");
+  var author = item.getAttribute("author");
+  var authorName = author.getAttribute("name");
+  var authorURI = author.getAttribute("url");
+
+  // generate code for the marker
+  var html = item.getAttribute("content");
+
+  var marker = new GMarker(latlng, {icon:tinyIcon} );
+  map.addOverlay(marker);
+  marker.openInfoWindowHtml( html, {disableGoogleLinks:true} );
+ 
+  // remember to limit repetitions
+  lastLocation = latlng;
+  lastUser = url;
+
+  return marker;
+}
+
+//
+// Kills running timeouts
+//
+function killTimer () {
+  clearTimeout( nextItemTimeoutID );
+  clearTimeout( FetchItemsTimeoutID );
+}
+
+</script>
+
+]]></Content>
+</Module>
+
