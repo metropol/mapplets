@@ -25,7 +25,6 @@ map.setCenter(new GLatLng(0,0), 3);
 
 var current = 0; // the photo item to process
 var showtime = 7; // every how many seconds a photo is processed
-var skipdelay = 0.050; // timeout to skip to next photo in batch when the current is not usable
 var items; // the array of items waiting to be processed.
 var marker; // the marker for the current photo
 var nextItemTimeoutID;
@@ -54,7 +53,7 @@ FetchItems();
 // Builds the url of the public timeline
 //
 function buildURL () {
-  var url = "http://www.smugmug.com/hack/feed.mg?Type=geoAll&format=atom03";
+  var url = "http://www.smugmug.com/hack/feed.mg?Type=geoAll&format=atom03&ImageCount=10";
   return url;
 }
 
@@ -81,8 +80,8 @@ function parseContent (response) {
 // Process the current item
 //
 function ProcessItem () {
-  document.getElementById("debug").innerHTML = "Processing item #" + current;		
-  var item = items.item[ current ];
+  document.getElementById("debug").innerHTML = "Processing item # " + current;		
+  var item = items.item( current ).childNodes;
   clearMap( marker );     // remove previous marker
   marker = createItemMarker( item ); // and prepare the next
   manageContent( showtime );
@@ -98,14 +97,14 @@ function manageContent( timeout ) {
 
   if ( current < items.length ) {
     // it there are items left, set timeout to process the next.
-    nextItemTimeoutID = window.setTimeout( ProcessItem, timeout*1000);
+    nextItemTimeoutID = window.setTimeout( 'ProcessItem()', timeout*1000);
   }
   else {
     document.getElementById("debug").innerHTML = "Scheduling feed update";		
     // no items left: reset status and get a new batch
     current = 0;
     baseurl = buildURL(); // processed all pages from last batch. need to get a new one.
-    FetchItemsTimeoutID = window.setTimeout( FetchItems, timeout*1000);
+    FetchItemsTimeoutID = window.setTimeout( 'FetchItems()', timeout*1000);
   }
 }
 
@@ -124,31 +123,52 @@ function clearMap( marker ) {
 // Creates HTML for the marker for the item
 //
 function createItemMarker ( item ) {
-  document.getElementById("debug").innerHTML = "Generating marker...";		
   // get info to build the marker
-  var lat  = item.getAttribute("geo:lat");
-  var lng  = photo.getAttribute("geo:long");
+  var lat  = getTagContent( searchTagName( item, "geo:lat" ) );
+  var lng  = getTagContent( searchTagName( item, "geo:long" ) );
+  if ( lng === null ) {
+    // don't create a new marker. return the existing one.
+    return marker;
+  } 
   var latlng = new GLatLng(lat, lng);
-  var title = item.getAttribute("title");
-  var thumb = item.getAttribute("id");
-  var lastupdate = item.getAttribute("modified");
-  var author = item.getAttribute("author");
-  var authorName = author.getAttribute("name");
-  var authorURI = author.getAttribute("url");
 
-  // generate code for the marker
-  var html = item.getAttribute("content");
+  var title  = getTagContent( searchTagName( item, "title" ) );
+  var img    = getTagContent( searchTagName( item, "id" ) );
+
+  var html = '<div style="width:240px; font-size:12px;">'+
+    '<b>'+title+'</b></br>'+
+    '<img src="' + img + '" alt="'+ title +'" /></br>'+
+    '</div>';
 
   var marker = new GMarker(latlng, {icon:tinyIcon} );
   map.addOverlay(marker);
   marker.openInfoWindowHtml( html, {disableGoogleLinks:true} );
  
-  // remember to limit repetitions
-  lastLocation = latlng;
-  lastUser = url;
-
   return marker;
 }
+
+
+// I have still to find a way to parse nested tag
+// in the XML document i.e. the child nodes of the <entry>
+// elements.
+// Till then, I just do a linear search on all childs for
+// a given tag name. This is slow, but that's it for the moment.
+function searchTagName ( nodeList, name ) {
+  document.getElementById("debug").innerHTML = "Searching for tag name " + name;		
+  for ( i=0; i < nodeList.length; i++ ) {
+    if ( nodeList.item(i).tagName === name ) {
+      return nodeList.item(i);
+    }
+  }
+  return null;
+}
+
+
+// Return content of the given node
+function getTagContent ( node ) {
+  return node && node.firstChild.nodeValue;
+}
+
 
 //
 // Kills running timeouts
