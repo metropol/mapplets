@@ -53,7 +53,7 @@ FetchItems();
 // Builds the url of the public timeline
 //
 function buildURL () {
-  var url = "http://www.smugmug.com/hack/feed.mg?Type=geoAll&format=atom03&ImageCount=10";
+  var url = "http://www.smugmug.com/hack/feed.mg?Type=geoAll&format=atom03";
   return url;
 }
 
