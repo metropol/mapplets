@@ -73,6 +73,7 @@ function FetchItems ( processContent ) {
 function parseContent (response) {
   delete items; // release resources allocated for previous batch (is this right?)
   items = response.getElementsByTagName("entry");
+  document.getElementById("debug").innerHTML = "Retrieved " + items.length + " items";		
   ProcessItem(); // start processing
 }
 
@@ -80,6 +81,7 @@ function parseContent (response) {
 // Process the current item
 //
 function ProcessItem () {
+  document.getElementById("debug").innerHTML = "Processing item #" + current;		
   var item = items.item[ current ];
   clearMap( marker );     // remove previous marker
   marker = createItemMarker( item ); // and prepare the next
@@ -99,6 +101,7 @@ function manageContent( timeout ) {
     nextItemTimeoutID = window.setTimeout( ProcessItem, timeout*1000);
   }
   else {
+    document.getElementById("debug").innerHTML = "Scheduling feed update";		
     // no items left: reset status and get a new batch
     current = 0;
     baseurl = buildURL(); // processed all pages from last batch. need to get a new one.
@@ -121,6 +124,7 @@ function clearMap( marker ) {
 // Creates HTML for the marker for the item
 //
 function createItemMarker ( item ) {
+  document.getElementById("debug").innerHTML = "Generating marker...";		
   // get info to build the marker
   var lat  = item.getAttribute("geo:lat");
   var lng  = photo.getAttribute("geo:long");
