@@ -44,7 +44,7 @@ tinyIcon.infoWindowAnchor = new GPoint(5, 1);
 var baseurl = buildURL();
 
 // fetch the first batch of items from SmugMug
-FetchItems( parseContent );
+FetchItems();
 
 //
 // THE END
@@ -61,9 +61,9 @@ function buildURL () {
 //
 // Fetch feed from SmugMug
 //
-function FetchItems ( processContent ) {
+function FetchItems () {
   var url = baseurl;
-  _IG_FetchXmlContent(url, processContent, { refreshInterval: 20 } );
+  _IG_FetchXmlContent(url, parseContent, { refreshInterval: 20 } );
   document.getElementById("debug").innerHTML = "Loading geotagged photos feed...";		
 }
 
@@ -105,7 +105,7 @@ function manageContent( timeout ) {
     // no items left: reset status and get a new batch
     current = 0;
     baseurl = buildURL(); // processed all pages from last batch. need to get a new one.
-    FetchItemsTimeoutID = window.setTimeout( "FetchItems( parseContent )", timeout*1000);
+    FetchItemsTimeoutID = window.setTimeout( FetchItems, timeout*1000);
   }
 }
 
