@@ -132,12 +132,19 @@ function createItemMarker ( item ) {
   } 
   var latlng = new GLatLng(lat, lng);
 
-  var title  = getTagContent( searchTagName( item, "title" ) );
-  var img    = getTagContent( searchTagName( item, "id" ) );
+  var title = getTagContent( searchTagName( item, "title" ) );
+  var img = getTagContent( searchTagName( item, "id" ) );
 
-  var html = '<div style="width:240px; font-size:12px;">'+
+  var link = searchTagName( item, "link" );
+  var page = link.getAttribute("href");
+
+  var author = searchTagName( item, "author" );
+  var authorName = getTagContent( searchTagName( author.childNodes, "name" ) );
+
+  var html = '<div style="font-size:12px;  background-color:#000000; padding: 5px; color: #8CCA1E;">'+
     '<b>'+title+'</b></br>'+
-    '<img src="' + img + '" alt="'+ title +'" /></br>'+
+    'by <i><b>' +authorName+ '</b></i><br/>'+
+    '<a href="' + page + '" title="'+ title + '"><img src="' + img + '" width="150" height="150" style="border: 1px solid #999999;" /></br>'+
     '</div>';
 
   var marker = new GMarker(latlng, {icon:tinyIcon} );
