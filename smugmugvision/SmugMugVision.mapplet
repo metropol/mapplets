@@ -9,9 +9,11 @@
 <h3>SmugMugVision</h3><br>
 Using the <a href="http://smugmug.jot.com/API">SmugMug API</a> (or its <a href="http://smugmug.jot.com/WikiHome/Customization/FeedsTricks">feeds<a>), geotagged images are fetched from <a href="http://smugmug.com/">SmugMug</a> and displayed for a short interval on the map, one by one. 
 This mapplet is inspired by <a href="http://flickrvision.com">flickrvision</a> from David Troy.
+<br>
+Status: 
 </small>
 
-<cite id="debug">Loading...</cite>
+<cite id="debug" style="font-size:12px;">Initialized</cite>
 
 <script>
 
@@ -72,7 +74,6 @@ function FetchItems () {
 function parseContent (response) {
   delete items; // release resources allocated for previous batch (is this right?)
   items = response.getElementsByTagName("entry");
-  document.getElementById("debug").innerHTML = "Retrieved " + items.length + " items";		
   ProcessItem(); // start processing
 }
 
@@ -80,7 +81,7 @@ function parseContent (response) {
 // Process the current item
 //
 function ProcessItem () {
-  document.getElementById("debug").innerHTML = "Processing item # " + current;		
+  document.getElementById("debug").innerHTML = "Processing item " + current + "/" + items.length;		
   var item = items.item( current ).childNodes;
   clearMap( marker );     // remove previous marker
   marker = createItemMarker( item ); // and prepare the next
@@ -100,7 +101,7 @@ function manageContent( timeout ) {
     nextItemTimeoutID = window.setTimeout( 'ProcessItem()', timeout*1000);
   }
   else {
-    document.getElementById("debug").innerHTML = "Scheduling feed update";		
+    document.getElementById("debug").innerHTML = "Feed completed. Scheduling feed update...";		
     // no items left: reset status and get a new batch
     current = 0;
     baseurl = buildURL(); // processed all pages from last batch. need to get a new one.
@@ -161,7 +162,6 @@ function createItemMarker ( item ) {
 // Till then, I just do a linear search on all childs for
 // a given tag name. This is slow, but that's it for the moment.
 function searchTagName ( nodeList, name ) {
-  document.getElementById("debug").innerHTML = "Searching for tag name " + name;		
   for ( i=0; i < nodeList.length; i++ ) {
     if ( nodeList.item(i).tagName === name ) {
       return nodeList.item(i);
