@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Module>
-<ModulePrefs title="SMugMugVision" description="Using the SmugMug API (or its feeds), geotagged images are fetched from SmugMug and displayed for a short interval on the map, one by one. This mapplet is inspired by flickrvision from David Troy." author="Ugo Di Profio" author_email="gmetropol+mapplet@gmail.com" screenshot="" thumbnail="" height="300">
+<ModulePrefs title="SmugMugVision" description="Using the SmugMug API (or its feeds), geotagged images are fetched from SmugMug and displayed for a short interval on the map, one by one. This mapplet is inspired by flickrvision from David Troy." author="Ugo Di Profio" author_email="gmetropol+mapplet@gmail.com" screenshot="" thumbnail="" height="300">
   <Require feature="sharedmap"/>
 </ModulePrefs>
 <Content type="html"><![CDATA[
